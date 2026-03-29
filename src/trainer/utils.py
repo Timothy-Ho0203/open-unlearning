@@ -171,6 +171,52 @@ def compute_undial_boostTopK_loss(model, ref_model, inputs, beta, k, delta=0.0):
     return loss, outputs
 
 
+def compute_undial_probRedistribution_loss(
+    model, ref_model, inputs, lambda_uniform=0.1
+):
+    # Forward pass on the student (trainable) model
+    outputs = model(**inputs)
+    logits = outputs.logits
+    labels = inputs["labels"]
+
+    shift_labels = labels[..., 1:].contiguous()
+    shift_logits = logits[..., :-1, :].contiguous()
+
+    # Forward pass on the teacher model (no grad)
+    with torch.no_grad():
+        teacher_logits = ref_model(**inputs).logits
+    shift_teacher_logits = teacher_logits[..., :-1, :].contiguous()
+
+    vocab_size = shift_teacher_logits.shape[-1]
+
+    # Teacher probability distribution
+    teacher_probs = F.softmax(shift_teacher_logits, dim=-1)  # (B, T, V)
+
+    # Build the suppression mask for the ground-truth (forget) tokens
+    batch_idx = torch.arange(shift_teacher_logits.shape[0]).view(-1, 1, 1)
+    seq_idx = torch.arange(shift_teacher_logits.shape[1]).view(1, -1, 1)
+    suppress_mask = torch.zeros_like(teacher_probs)
+    suppress_mask[batch_idx, seq_idx, shift_labels.unsqueeze(-1)] = 1.0
+
+    # Zero out the forget token's mass and renormalise over remaining tokens
+    suppressed_probs = teacher_probs * (1.0 - suppress_mask)
+    renorm_probs = suppressed_probs / (
+        suppressed_probs.sum(dim=-1, keepdim=True) + 1e-8
+    )
+
+    # Mix with a uniform distribution to prevent extreme peaks (label smoothing)
+    soft_label = (
+        1.0 - lambda_uniform
+    ) * renorm_probs + lambda_uniform / vocab_size
+
+    loss_fct = nn.CrossEntropyLoss(reduction="none")
+    loss = loss_fct(
+        shift_logits.view(-1, shift_logits.size(-1)),
+        soft_label.view(-1, soft_label.size(-1)),
+    )
+    return loss.mean(), outputs
+
+
 def compute_wga_loss(model, inputs, beta):
     outputs = model(**inputs)
     labels = inputs["labels"]

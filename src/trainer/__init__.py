@@ -13,6 +13,7 @@ from trainer.unlearn.rmu import RMU
 from trainer.unlearn.undial import UNDIAL
 from trainer.unlearn.undial_boost2ndBest import UNDIALBoost2ndBest
 from trainer.unlearn.undial_boostTopK import UNDIALBoostTopK
+from trainer.unlearn.undial_probRedistribution import UNDIALProbRedistribution
 from trainer.unlearn.ceu import CEU
 from trainer.unlearn.satimp import SatImp
 from trainer.unlearn.wga import WGA
@@ -99,6 +100,7 @@ _register_trainer(RMU)
 _register_trainer(UNDIAL)
 _register_trainer(UNDIALBoost2ndBest)
 _register_trainer(UNDIALBoostTopK)
+_register_trainer(UNDIALProbRedistribution)
 _register_trainer(CEU)
 _register_trainer(SatImp)
 _register_trainer(WGA)

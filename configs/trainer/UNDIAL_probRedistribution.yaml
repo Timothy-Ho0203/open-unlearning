@@ -1,0 +1,12 @@
+defaults:
+  - finetune
+
+handler: UNDIALProbRedistribution # corresponds to the class defined in src/trainer/unlearn/undial_probRedistribution.py
+args: # HuggingFace TrainingArguments
+  learning_rate: 1e-4
+  num_train_epochs: 10
+method_args: # Your own method-specific arguments
+  gamma: 1.0
+  alpha: 0.0
+  lambda_uniform: 0.1 # mixing weight with uniform distribution (label smoothing); higher values = smoother targets
+  retain_loss_type: NLL
