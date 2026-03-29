@@ -66,7 +66,6 @@ def compute_dpo_loss(model, ref_model, win_inputs=None, lose_inputs=None, beta=1
     loss = -2 / beta * F.logsigmoid(beta * (win_log_ratio - lose_log_ratio)).mean()
     return loss, (win_outputs, lose_outputs)
 
-
 def compute_undial_loss(model, ref_model, inputs, beta):
     # Forward pass on the student (trainable) model
     outputs = model(**inputs)
@@ -89,6 +88,45 @@ def compute_undial_loss(model, ref_model, inputs, beta):
 
     # Adjust teacher logits: subtract di_strength on the correct token
     pre_softmax = shift_teacher_logits - mask * beta
+    soft_label = F.softmax(pre_softmax, dim=-1)
+
+    loss_fct = nn.CrossEntropyLoss(reduction="none")
+    loss = loss_fct(
+        shift_logits.view(-1, shift_logits.size(-1)),
+        soft_label.view(-1, soft_label.size(-1)),
+    )
+    return loss.mean(), outputs
+
+def compute_undial_boost2ndBest_loss(model, ref_model, inputs, beta, delta=0.0):
+    # Forward pass on the student (trainable) model
+    outputs = model(**inputs)
+    logits = outputs.logits
+    labels = inputs["labels"]
+
+    shift_labels = labels[..., 1:].contiguous()
+    shift_logits = logits[..., :-1, :].contiguous()
+
+    # Forward pass on the teacher model (no grad)
+    with torch.no_grad():
+        teacher_logits = ref_model(**inputs).logits
+    shift_teacher_logits = teacher_logits[..., :-1, :].contiguous()
+
+    batch_idx = torch.arange(shift_teacher_logits.shape[0]).view(-1, 1, 1)
+    seq_idx = torch.arange(shift_teacher_logits.shape[1]).view(1, -1, 1)
+
+    # Build the suppression mask for the ground-truth (forget) tokens
+    suppress_mask = torch.zeros_like(shift_teacher_logits)
+    suppress_mask[batch_idx, seq_idx, shift_labels.unsqueeze(-1)] = 1.0
+
+    # Build the boost mask for the 2nd-best token from the teacher
+    masked_teacher = shift_teacher_logits.clone()
+    masked_teacher[batch_idx, seq_idx, shift_labels.unsqueeze(-1)] = -float("inf")
+    alt_tokens = masked_teacher.argmax(dim=-1)  # (batch, seq)
+    boost_mask = torch.zeros_like(shift_teacher_logits)
+    boost_mask[batch_idx, seq_idx, alt_tokens.unsqueeze(-1)] = 1.0
+
+    # Suppress GT token and boost 2nd-best token before computing soft labels
+    pre_softmax = shift_teacher_logits - suppress_mask * beta + boost_mask * delta
     soft_label = F.softmax(pre_softmax, dim=-1)
 
     loss_fct = nn.CrossEntropyLoss(reduction="none")
