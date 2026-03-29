@@ -137,6 +137,40 @@ def compute_undial_boost2ndBest_loss(model, ref_model, inputs, beta, delta=0.0):
     return loss.mean(), outputs
 
 
+def compute_undial_boostTopK_loss(model, ref_model, inputs, beta, k, delta=0.0):
+    # Forward pass on the student (trainable) model — keep in gradient graph
+    outputs = model(**inputs)
+    logits = outputs.logits
+    labels = inputs["labels"]
+
+    shift_labels = labels[..., 1:].contiguous()
+    shift_logits = logits[..., :-1, :].contiguous()
+
+    # Forward pass on the teacher model (no grad)
+    with torch.no_grad():
+        teacher_logits = ref_model(**inputs).logits
+    shift_teacher_logits = teacher_logits[..., :-1, :].contiguous()
+
+    # Use detached teacher logits for index selection — selection is not backpropagated
+    masked_teacher = shift_teacher_logits.detach().clone()
+    batch_idx = torch.arange(masked_teacher.shape[0]).view(-1, 1, 1)
+    seq_idx = torch.arange(masked_teacher.shape[1]).view(1, -1, 1)
+    # Zero out the GT token so it cannot be selected as a top-K alternative
+    masked_teacher[batch_idx, seq_idx, shift_labels.unsqueeze(-1)] = -float("inf")
+    # Top-K indices (B, T, K) — GT excluded by construction
+    topk_indices = masked_teacher.topk(k, dim=-1).indices
+
+    # Gather the student logits at the K selected positions (gradient intact)
+    selected_logits = shift_logits.gather(dim=-1, index=topk_indices)  # (B, T, K)
+
+    # Log-sum-exp over selected K logits vs. all logits — minimising this loss
+    # maximises the total probability mass assigned to the K alternative tokens
+    lse_selected = torch.logsumexp(selected_logits, dim=-1)  # (B, T)
+    lse_all = torch.logsumexp(shift_logits, dim=-1)           # (B, T)
+    loss = (lse_all - lse_selected).mean()
+    return loss, outputs
+
+
 def compute_wga_loss(model, inputs, beta):
     outputs = model(**inputs)
     labels = inputs["labels"]

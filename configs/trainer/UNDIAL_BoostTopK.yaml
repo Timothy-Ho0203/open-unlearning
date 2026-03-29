@@ -1,0 +1,14 @@
+defaults:
+  - finetune
+
+handler: UNDIALBoostTopK # corresponds to the class defined in src/trainer/unlearn/undial_boostTopK.py
+args: # HuggingFace TrainingArguments
+  learning_rate: 1e-4
+  num_train_epochs: 10
+method_args: # Your own method-specific arguments
+  gamma: 1.0
+  alpha: 0.0
+  beta: 10.0   # strength of suppression on ground-truth token (via teacher soft labels)
+  k: 5         # number of top-K alternative tokens to boost
+  delta: 0.0   # unused in logsumexp loss; kept for interface compatibility
+  retain_loss_type: NLL

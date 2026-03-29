@@ -12,6 +12,7 @@ from trainer.unlearn.simnpo import SimNPO
 from trainer.unlearn.rmu import RMU
 from trainer.unlearn.undial import UNDIAL
 from trainer.unlearn.undial_boost2ndBest import UNDIALBoost2ndBest
+from trainer.unlearn.undial_boostTopK import UNDIALBoostTopK
 from trainer.unlearn.ceu import CEU
 from trainer.unlearn.satimp import SatImp
 from trainer.unlearn.wga import WGA
@@ -97,6 +98,7 @@ _register_trainer(SimNPO)
 _register_trainer(RMU)
 _register_trainer(UNDIAL)
 _register_trainer(UNDIALBoost2ndBest)
+_register_trainer(UNDIALBoostTopK)
 _register_trainer(CEU)
 _register_trainer(SatImp)
 _register_trainer(WGA)
