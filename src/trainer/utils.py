@@ -172,7 +172,7 @@ def compute_undial_boostTopK_loss(model, ref_model, inputs, beta, k, delta=0.0):
 
 
 def compute_undial_probRedistribution_loss(
-    model, ref_model, inputs, lambda_uniform=0.1
+    model, ref_model, inputs, lambda_uniform=0.1, suppress_alpha=0.01
 ):
     # Forward pass on the student (trainable) model
     outputs = model(**inputs)
@@ -198,11 +198,11 @@ def compute_undial_probRedistribution_loss(
     suppress_mask = torch.zeros_like(teacher_probs)
     suppress_mask[batch_idx, seq_idx, shift_labels.unsqueeze(-1)] = 1.0
 
-    # Zero out the forget token's mass and renormalise over remaining tokens
-    suppressed_probs = teacher_probs * (1.0 - suppress_mask)
-    renorm_probs = suppressed_probs / (
-        suppressed_probs.sum(dim=-1, keepdim=True) + 1e-8
-    )
+    # Heavily suppress (but don't zero) the forget token's mass, then renormalise.
+    # suppress_alpha controls the residual mass kept at the forget token (0 = hard zero).
+    suppression_factor = 1.0 - (1.0 - suppress_alpha) * suppress_mask
+    suppressed_probs = teacher_probs * suppression_factor
+    renorm_probs = suppressed_probs / suppressed_probs.sum(dim=-1, keepdim=True)
 
     # Mix with a uniform distribution to prevent extreme peaks (label smoothing)
     soft_label = (

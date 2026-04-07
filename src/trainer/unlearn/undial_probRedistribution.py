@@ -3,9 +3,10 @@ from trainer.unlearn.grad_diff import GradDiff
 
 
 class UNDIALProbRedistribution(GradDiff):
-    def __init__(self, lambda_uniform=0.1, *args, **kwargs):
+    def __init__(self, lambda_uniform=0.1, suppress_alpha=0.01, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lambda_uniform = lambda_uniform
+        self.suppress_alpha = suppress_alpha
         if self.ref_model is None:
             self.ref_model = self._prepare_ref_model(self.model)
 
@@ -14,7 +15,7 @@ class UNDIALProbRedistribution(GradDiff):
     ):
         forget_inputs = inputs["forget"]
         forget_loss, forget_outputs = compute_undial_probRedistribution_loss(
-            model, self.ref_model, forget_inputs, self.lambda_uniform
+            model, self.ref_model, forget_inputs, self.lambda_uniform, self.suppress_alpha
         )
 
         retain_inputs = inputs["retain"]

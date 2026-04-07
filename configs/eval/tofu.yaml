@@ -8,15 +8,16 @@ defaults: # include all defined metrics files
     - forget_quality
     - forget_Q_A_Prob
     - forget_Q_A_ROUGE
+    - forget_Q_A_PARA_Prob
     - model_utility # populated in the metrics key as metrics.model_utility
     - privleak
     - extraction_strength
-    # - exact_memorization
-    # - mia_min_k_plus_plus
-    # - mia_min_k
-    # - mia_loss
-    # - mia_zlib
-    # - mia_gradnorm
+    - exact_memorization
+    - mia_min_k_plus_plus
+    - mia_min_k
+    - mia_loss
+    - mia_zlib
+    - mia_gradnorm
     # - mia_reference # set reference model path appropriately
     # - forget_Q_A_gibberish
 

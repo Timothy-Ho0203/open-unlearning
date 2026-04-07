@@ -9,4 +9,5 @@ method_args: # Your own method-specific arguments
   gamma: 1.0
   alpha: 0.0
   lambda_uniform: 0.1 # mixing weight with uniform distribution (label smoothing); higher values = smoother targets
+  suppress_alpha: 0.01 # residual mass kept at the forget token after suppression (0.0 = hard zero, 1.0 = no suppression)
   retain_loss_type: NLL
