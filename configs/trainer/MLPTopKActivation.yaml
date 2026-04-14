@@ -1,0 +1,14 @@
+defaults:
+  - GradDiff
+
+handler: MLPTopKActivation
+
+method_args:
+  topk_percent: 1.0
+  min_topk: 1
+  gamma: 1.0
+  alpha: 1.0
+  retain_loss_type: KL
+  mlp_module_pattern: "(^|\\.)model\\.layers\\.(?:[8-9]|1[0-2])\\.mlp(\\.|$)"
+  exclude_module_pattern: "(self_attn|attention)"
+  activation_regularization: l2
